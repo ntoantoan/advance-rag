@@ -1,15 +1,12 @@
 import os
+import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from typing import List, Optional
-import uvicorn
-
 from splitter.text_splitter import RecursiveCharacterTextSplitter, CharacterTextSplitter
-from embedding.third_party import EmbeddingGenerator
-
 from vectordb.uploads import upload_milvus, upload_pgvector
-
 from utils import chat_completion_without_stream
+from search.weight_rerank import WeightRerank
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -19,7 +16,6 @@ app = FastAPI(
 )
 
 documents_db = []
-
 @app.get("/")
 async def root():
     """Root endpoint returning API status"""
@@ -44,7 +40,9 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    response = chat_completion_without_stream([{"role": "user", "content": request.message}], history=request.history)
+    query = request.message
+    documents = WeightRerank().run(query, k=5, hybird_search=True)
+    response = chat_completion_without_stream([{"role": "user", "content": request.message}], documents=documents, api_key=os.getenv("OPENAI_API_KEY"))
     return {"response": response}
 
 
