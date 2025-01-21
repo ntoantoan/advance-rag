@@ -13,10 +13,11 @@ def convert_query_to_bm25(query: str) -> List[str]:
     return query_tokens
 
 class WeightRerank:
-    def __init__(self, ):
+    def __init__(self, redis_cache):
         self.bm25 = BM25()
         self.embedding_generator = EmbeddingGenerator(provider="openai", api_key=os.getenv("OPENAI_API_KEY"))
         self.pgvector = PGVector(connection_string="postgresql://postgres:postgres@localhost:5432/vectordb")
+        self.redis_cache = redis_cache
 
 
     def get_query_vector(self, query: List[str]) -> List[float]:
