@@ -99,6 +99,8 @@ class BM25:
         
         if top_k is not None:
             ranked_docs = ranked_docs[:top_k]
+        #sort by index
+        ranked_docs = sorted(ranked_docs, key=lambda x: x[0])
         
         #return index and score as a list
         return ranked_docs

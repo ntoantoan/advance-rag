@@ -94,6 +94,11 @@ class PGVector:
                 "k": k
             })
             return [row for row in results]
+    
+    def get_all_vectors(self) -> List[dict]:
+        with Session(self.engine) as session:
+            results = session.execute(text("SELECT * FROM vector_store"))
+            return [row for row in results]
 
 if __name__ == "__main__":
     vdb = PGVector(connection_string="postgresql://postgres:postgres@localhost:5432/vectordb")
