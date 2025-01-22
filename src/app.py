@@ -8,7 +8,11 @@ from vectordb.uploads import upload_milvus, upload_pgvector
 from utils import chat_completion_without_stream
 from search.weight_rerank import WeightRerank
 from cache_embedding import EmbeddingCache
-
+from cleaner.text_extractor import TextExtractor                                                        
+from cleaner.pdf_extractor import PdfExtractor
+from cleaner.csv_extractor import CSVExtractor
+from cleaner.docx_extractor import WordExtractor
+storage_path = "storage"
 
 
 redis_cache = EmbeddingCache()
@@ -30,14 +34,39 @@ async def root():
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
+    # Create storage directory if it doesn't exist
+    os.makedirs(storage_path, exist_ok=True)
+    
     contents = await file.read()
+    with open(f"{storage_path}/{file.filename}", "wb") as f:
+        f.write(contents)
+    
+    if file.filename.endswith(".pdf"):
+        extractor = PdfExtractor(f"{storage_path}/{file.filename}")
+        documents = extractor.extract()
+    elif file.filename.endswith(".csv"):
+        extractor = CSVExtractor(f"{storage_path}/{file.filename}")
+        documents = extractor.extract()
+
+    elif file.filename.endswith(".txt"):
+        extractor = TextExtractor(f"{storage_path}/{file.filename}")
+        documents = extractor.extract()
+    elif file.filename.endswith(".docx"):
+        extractor = WordExtractor(f"{storage_path}/{file.filename}")
+        documents = extractor.extract()
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported file type")
+    
+
+    contents = [doc.page_content for doc in documents]
+
+    #to string
+    contents = "\n".join(contents)
     # contents = contents.decode('utf-8')  # Decode bytes to string
     # upload_milvus(collection_name="rag_collection", dim=1536, contents=contents)
-    upload_pg = upload_pgvector(1536, contents)
-    return {
-        "filename": file.filename, 
-        "status": "success"
-    }
+    upload_pg_result = upload_pgvector(1536, contents)
+    return upload_pg_result
+
 
 class ChatRequest(BaseModel):
     message: str
