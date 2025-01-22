@@ -7,6 +7,12 @@ from splitter.text_splitter import RecursiveCharacterTextSplitter, CharacterText
 from vectordb.uploads import upload_milvus, upload_pgvector
 from utils import chat_completion_without_stream
 from search.weight_rerank import WeightRerank
+from cache_embedding import EmbeddingCache
+
+
+
+redis_cache = EmbeddingCache()
+weight_rerank = WeightRerank(redis_cache)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -28,7 +34,6 @@ async def upload_file(file: UploadFile = File(...)):
     # contents = contents.decode('utf-8')  # Decode bytes to string
     # upload_milvus(collection_name="rag_collection", dim=1536, contents=contents)
     upload_pg = upload_pgvector(1536, contents)
-    print(upload_pg)
     return {
         "filename": file.filename, 
         "status": "success"
@@ -41,7 +46,7 @@ class ChatRequest(BaseModel):
 @app.post("/chat")
 async def chat(request: ChatRequest):
     query = request.message
-    documents = WeightRerank().run(query, k=5, hybird_search=True)
+    documents = weight_rerank.run(query, k=5, hybird_search=True)
     response = chat_completion_without_stream([{"role": "user", "content": request.message}], documents=documents, api_key=os.getenv("OPENAI_API_KEY"))
     return {"response": response}
 

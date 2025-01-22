@@ -13,10 +13,11 @@ def convert_query_to_bm25(query: str) -> List[str]:
     return query_tokens
 
 class WeightRerank:
-    def __init__(self, ):
+    def __init__(self, redis_cache):
         self.bm25 = BM25()
         self.embedding_generator = EmbeddingGenerator(provider="openai", api_key=os.getenv("OPENAI_API_KEY"))
         self.pgvector = PGVector(connection_string="postgresql://postgres:postgres@localhost:5432/vectordb")
+        self.redis_cache = redis_cache
 
 
     def get_query_vector(self, query: List[str]) -> List[float]:
@@ -59,8 +60,17 @@ class WeightRerank:
             document_contents = [contents[idx] for idx, _ in bm25_scores][:10]
 
 
-            query_vector = self.get_query_vector(query)
-            vector_scores = self.get_ranking_vectordb(query_vector, k=10)
+
+            #check if vector search in redis
+            if self.redis_cache.get_embedding(query):
+                query_vector = self.redis_cache.get_embedding(query)
+                print("query_vector from redis")
+            else:
+                query_vector = self.get_query_vector(query)
+                self.redis_cache.store_embedding(query, query_vector, ttl=60)
+                print("query_vector from openai")
+
+            vector_scores = self.get_ranking_vectordb(query_vector, k=k)
 
             document_vectors_store = [doc.content for doc in all_documents]
 
@@ -71,11 +81,20 @@ class WeightRerank:
 
             pair_scores.sort(key=lambda x: x[1], reverse=True)
             rerank_documents = [document for document, _ in pair_scores[:k]]
+            #add rerank with document_vectors_store extract content
+            rerank_documents.extend(document_vectors_store)
 
             return rerank_documents
 
         elif vector_search:
-            query_vector = self.get_query_vector(query)
+            #check if vector search in redis
+            vector_search_key = query
+            if self.redis_cache.get_embedding(vector_search_key):
+                query_vector = self.redis_cache.get_embedding(vector_search_key)
+            else:
+                query_vector = self.get_query_vector(query)
+                self.redis_cache.store_embedding(vector_search_key, query_vector)
+
             vector_scores = self.get_ranking_vectordb(query_vector, k=k)
             # rerank_documents = [contents[idx] for idx, _ in vector_scores]
             rerank_documents = [doc["content"] for doc in vector_scores]
@@ -95,5 +114,5 @@ if __name__ == "__main__":
     # query_tokens = convert_query_to_bm25(query)
     # score = wr.run(query_tokens, documents, k=5)
     # print(score)
-    docs = wr.run("queries and documents", k=5, vector_search=True)
+    docs = wr.run("what is rag", k=5, hybird_search=True)
     print(docs)
