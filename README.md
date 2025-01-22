@@ -12,6 +12,72 @@ An advanced Retrieval-Augmented Generation (RAG) system built with FastAPI, feat
 
 ## 🏗️ Architecture
 
+```mermaid
+graph TD
+    subgraph Client
+        A[Client Request] --> B[FastAPI App]
+    end
+
+    subgraph File Processing
+        B --> C{File Type}
+        C -->|PDF| D[PDF Extractor]
+        C -->|CSV| E[CSV Extractor]
+        C -->|TXT| F[Text Extractor]
+        C -->|DOCX| G[Word Extractor]
+        D & E & F & G --> H[Text Chunks]
+    end
+
+    subgraph Embedding Pipeline
+        H --> I[Embedding Generator]
+        I --> J[Redis Cache]
+        I --> K[Vector Storage]
+    end
+
+    subgraph Vector Storage
+        K -->|Primary| L[PGVector]
+        K -->|Optional| M[Milvus]
+    end
+
+    subgraph RAG Pipeline
+        N[User Query] --> O[Weight Rerank]
+        O --> P[Hybrid Search]
+        P --> Q[Vector Search]
+        P --> R[BM25 Search]
+        Q & R --> S[Reranking]
+        S --> T[Context]
+        T --> U[Chat Completion]
+        U --> V[Response]
+    end
+
+    style Client fill:#f9f,stroke:#333
+    style File Processing fill:#bbf,stroke:#333
+    style Embedding Pipeline fill:#bfb,stroke:#333
+    style Vector Storage fill:#fbf,stroke:#333
+    style RAG Pipeline fill:#fbb,stroke:#333
+```
+
+Key Components:
+
+1. **File Processing**
+   - Supports multiple file formats (.pdf, .csv, .txt, .docx)
+   - Specialized extractors for each format
+   - Chunks text for optimal processing
+
+2. **Embedding Pipeline**
+   - Generates embeddings using OpenAI's API
+   - Caches embeddings in Redis
+   - Stores vectors in database
+
+3. **Vector Storage**
+   - Primary: PGVector (PostgreSQL)
+   - Optional: Milvus support
+   - Efficient vector similarity search
+
+4. **RAG Pipeline**
+   - Hybrid search combining vector and keyword approaches
+   - Weight-based reranking
+   - Context-aware chat completion
+   - Stateless response generation
 
 ## 🚀 Quick Start
 
