@@ -59,6 +59,8 @@ class WeightRerank:
             query_scores = [score for _, score in bm25_scores][:k]
             document_contents = [contents[idx] for idx, _ in bm25_scores][:10]
 
+
+
             #check if vector search in redis
             if self.redis_cache.get_embedding(query):
                 query_vector = self.redis_cache.get_embedding(query)
@@ -66,9 +68,8 @@ class WeightRerank:
             else:
                 query_vector = self.get_query_vector(query)
                 self.redis_cache.store_embedding(query, query_vector, ttl=60)
+                print("query_vector from openai")
 
-                
-            
             vector_scores = self.get_ranking_vectordb(query_vector, k=k)
 
             document_vectors_store = [doc.content for doc in all_documents]

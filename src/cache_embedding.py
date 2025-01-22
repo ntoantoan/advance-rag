@@ -14,21 +14,20 @@ class EmbeddingCache:
         """
         self.redis_client = redis.Redis(host=host, port=port, db=db)
         
-    def store_embedding(self, key: str, embedding: np.ndarray, ttl: Optional[int] = None) -> bool:
+    def store_embedding(self, key: str, embedding: List[float], ttl: Optional[int] = None) -> bool:
         """Store embedding vector in Redis cache.
         
         Args:
             key: Unique identifier for the embedding
-            embedding: Numpy array containing the embedding vector
+            embedding: List containing the embedding vector
             ttl: Time-to-live in seconds (optional)
             
         Returns:
             bool: True if successful, False otherwise
         """
         try:
-            # Convert numpy array to list for JSON serialization
-            embedding_list = embedding.tolist()
-            embedding_json = json.dumps(embedding_list)
+            # Convert embedding list to JSON string
+            embedding_json = json.dumps(embedding)
             
             # Store in Redis
             if ttl:
@@ -39,22 +38,21 @@ class EmbeddingCache:
         except Exception:
             return False
             
-    def get_embedding(self, key: str) -> Optional[np.ndarray]:
+    def get_embedding(self, key: str) -> Optional[List[float]]:
         """Retrieve embedding vector from Redis cache.
         
         Args:
             key: Unique identifier for the embedding
             
         Returns:
-            np.ndarray if found, None otherwise
+            List[float] if found, None otherwise
         """
         try:
             result = self.redis_client.get(key)
             if result is None:
                 return None
                 
-            embedding_list = json.loads(result)
-            return np.array(embedding_list)
+            return json.loads(result)
         except Exception:
             return None
             
@@ -70,10 +68,8 @@ class EmbeddingCache:
         return bool(self.redis_client.delete(key))
 
 if __name__ == "__main__":
-    # cache = EmbeddingCache()
-    # print(cache.get_embedding("doc1"))
-    #example
-    vector = np.random.rand(1536)
+    # Example
+    vector = [0.1, 0.2, 0.3] * 512  # Create a sample list of floats
     query = "What is the meaning of?"
     cache = EmbeddingCache()
     # cache.store_embedding(query, vector, ttl=60)
