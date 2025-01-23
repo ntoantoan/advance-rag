@@ -30,7 +30,7 @@ class WeightRerank:
         pass
 
 
-    def run(self, query: str, k: int = 5, hybird_search: bool = False, vector_search: bool = False) -> List[str]:
+    def run(self, query: str, k: int = 5, hybrid_search: bool = False, vector_search: bool = False) -> List[str]:
         """
         Implement the weight reranking algorithm
         score = 0.4/(1+score_bm25) + 0.6/(1+score_vectordb)
@@ -50,7 +50,7 @@ class WeightRerank:
             return []
 
         # Process documents for BM25
-        if hybird_search:  
+        if hybrid_search:  
             contents = [doc.content for doc in all_documents]
             bm25_corpus = convert_documents_to_bm25(contents)
             self.bm25.fit(bm25_corpus)

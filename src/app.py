@@ -1,15 +1,15 @@
 import os
 import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, File
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, AsyncGenerator
 import logging
 
 # Local imports
 from splitter.text_splitter import RecursiveCharacterTextSplitter, CharacterTextSplitter
 from vectordb.uploads import upload_pgvector
-from utils import chat_completion_without_stream
+from utils import chat_completion_without_stream, chat_completion_with_stream
 from search.weight_rerank import WeightRerank
 from cache_embedding import EmbeddingCache
 from cleaner.text_extractor import TextExtractor
@@ -111,7 +111,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         ChatResponse object containing the response
     """
     try:
-        documents = weight_rerank.run(request.message, k=5, hybird_search=True)
+        documents = weight_rerank.run(request.message, k=5, hybrid_search=True)
         response = chat_completion_without_stream(
             [{"role": "user", "content": request.message}],
             documents=documents,
@@ -121,6 +121,39 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
     except Exception as e:
         logger.error(f"Error processing chat request: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/chat/stream")
+async def chat_stream(request: ChatRequest) -> StreamingResponse:
+    """
+    Process chat messages using RAG with streaming response
+    
+    Args:
+        request: ChatRequest object containing message and history
+    
+    Returns:
+        StreamingResponse object containing the chat completion stream
+    """
+    try:
+        documents = weight_rerank.run(request.message, k=5, hybrid_search=True)
+        
+        async def generate_response() -> AsyncGenerator[str, None]:
+            async for chunk in chat_completion_with_stream(
+                [{"role": "user", "content": request.message}],
+                documents=documents,
+                api_key=os.getenv("OPENAI_API_KEY")
+            ):
+                if chunk:
+                    yield f"data: {chunk}\n\n"
+            yield "data: [DONE]\n\n"
+            
+        return StreamingResponse(
+            generate_response(),
+            media_type="text/event-stream"
+        )
+
+    except Exception as e:
+        logger.error(f"Error processing streaming chat request: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
