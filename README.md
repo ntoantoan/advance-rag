@@ -48,12 +48,6 @@ graph TD
         T --> U[Chat Completion]
         U --> V[Response]
     end
-
-    style Client fill:#f9f,stroke:#333
-    style File Processing fill:#bbf,stroke:#333
-    style Embedding Pipeline fill:#bfb,stroke:#333
-    style Vector Storage fill:#fbf,stroke:#333
-    style RAG Pipeline fill:#fbb,stroke:#333
 ```
 
 Key Components:
@@ -142,6 +136,24 @@ Content-Type: application/json
     "message": "your question here",
     "history": ["optional chat history"]
 }
+```
+
+### Streaming Chat
+```http
+POST /chat/stream
+Content-Type: application/json
+
+{
+    "message": "your question here",
+    "history": ["optional chat history"]
+}
+```
+
+The streaming endpoint returns a server-sent events (SSE) stream with the following format:
+```
+data: {"type": "content", "content": "chunk of response..."}
+data: {"type": "content", "content": "next chunk..."}
+data: [DONE]
 ```
 
 ## 🛠️ Components
