@@ -48,12 +48,6 @@ graph TD
         T --> U[Chat Completion]
         U --> V[Response]
     end
-
-    style Client fill:#f9f,stroke:#333
-    style File Processing fill:#bbf,stroke:#333
-    style Embedding Pipeline fill:#bfb,stroke:#333
-    style Vector Storage fill:#fbf,stroke:#333
-    style RAG Pipeline fill:#fbb,stroke:#333
 ```
 
 Key Components:
